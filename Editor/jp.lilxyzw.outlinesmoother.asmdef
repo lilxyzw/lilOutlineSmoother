@@ -1,0 +1,25 @@
+{
+    "name": "jp.lilxyzw.outlinesmoother",
+    "rootNamespace": "jp.lilxyzw.outlinesmoother",
+    "references": [
+        "jp.lilxyzw.outlinesmoother.runtime",
+        "nadena.dev.ndmf"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "nadena.dev.ndmf",
+            "expression": "1.5.0",
+            "define": "LIL_NDMF"
+        }
+    ],
+    "noEngineReferences": false
+}

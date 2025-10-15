@@ -1,0 +1,31 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ja-JP\n"
+
+
+
+#: Common
+
+msgid "Please add NDMF (Non-Destructive Modular Framework) 1.5.0 or later to your project. NDMF is automatically added when you add a Modular Avatar to your project."
+msgstr "NDMF（Non-Destructive Modular Framework）1.5.0以降をプロジェクトに追加してください。NDMFはプロジェクトにModular Avatarを追加すると自動で追加されます。"
+
+msgid "Reference Mesh"
+msgstr "参照メッシュ"
+
+msgid "Specify this if you want to reference the normals of another mesh. If not specified, the normals of the existing mesh will be recalculated and used."
+msgstr "別メッシュの法線を参照したい場合に指定します。指定がない場合は既存のメッシュの法線を再計算して使用します。"
+
+msgid "Smoothing Distance"
+msgstr "平滑化距離"
+
+msgid "Averages the normals of vertices within a specified distance."
+msgstr "指定した距離内にある頂点の法線を平均化します。"
+
+msgid "Shrink Tip Strength"
+msgstr "先端のアウトライン縮小強度"
+
+msgid "The dot product of the original normal and the smoothed normal is calculated, and the smaller the dot product, the smaller the outline will be."
+msgstr "元の法線と平滑化された法線の内積を計算し、内積が小さいほどアウトラインを縮小します。"

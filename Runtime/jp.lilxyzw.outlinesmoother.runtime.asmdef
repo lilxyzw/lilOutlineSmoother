@@ -1,0 +1,22 @@
+{
+    "name": "jp.lilxyzw.outlinesmoother.runtime",
+    "rootNamespace": "jp.lilxyzw.outlinesmoother.runtime",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "VRCSDKBase.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.vrchat.base",
+            "expression": "",
+            "define": "LIL_VRCSDK"
+        }
+    ],
+    "noEngineReferences": false
+}
