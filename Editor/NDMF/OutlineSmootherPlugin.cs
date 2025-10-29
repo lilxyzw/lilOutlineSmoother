@@ -1,4 +1,5 @@
 #if LIL_NDMF
+using System.Collections.Generic;
 using System.Linq;
 using jp.lilxyzw.outlinesmoother;
 using jp.lilxyzw.outlinesmoother.runtime;
@@ -23,6 +24,7 @@ namespace jp.lilxyzw.outlinesmoother
                 var smoothers = ctx.AvatarRootObject.GetComponentsInChildren<OutlineSmoother>(true);
                 if (smoothers.Length == 0) return;
 
+                var modifiedMaterials = new Dictionary<Material, Material>();
                 foreach (var s in smoothers)
                 {
                     var renderer = s.GetComponent<Renderer>();
@@ -42,11 +44,17 @@ namespace jp.lilxyzw.outlinesmoother
                             meshFilter.sharedMesh = Replace(meshFilter.sharedMesh, mesh, ctx);
                         }
                     }
-                    renderer.sharedMaterials = renderer.sharedMaterials.Select(m => Replace(m, OutlineSmootherProcessor.GetModifiedMaterial(m), ctx)).ToArray();
+                    renderer.sharedMaterials = renderer.sharedMaterials.Select(m => ReplaceToModifiedMaterial(m, modifiedMaterials, ctx)).ToArray();
                 }
 
                 foreach (var s in smoothers) Object.DestroyImmediate(s);
             }).PreviewingWith(new PreviewOutlineSmoother());
+        }
+
+        private Material ReplaceToModifiedMaterial(Material material, Dictionary<Material, Material> modifiedMaterials, BuildContext ctx)
+        {
+            if (modifiedMaterials.TryGetValue(material, out var value)) return value;
+            return Replace(material, modifiedMaterials[material] = OutlineSmootherProcessor.GetModifiedMaterial(material), ctx);
         }
 
         private T Replace<T>(T orig, T obj, BuildContext ctx) where T : Object
