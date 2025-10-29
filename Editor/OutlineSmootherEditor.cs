@@ -61,7 +61,7 @@ namespace jp.lilxyzw.outlinesmoother
                 root.Add(element);
                 element.style.paddingTop = 10;
                 var label = $"{i}.";
-                if (label.Length > i && !string.IsNullOrEmpty(labels[i])) label = $"{i}. {labels[i]}";
+                if (labels.Length > i && !string.IsNullOrEmpty(labels[i])) label = $"{i}. {labels[i]}";
                 element.Add(new Label(label));
                 var box = new VisualElement();
                 element.Add(box);
