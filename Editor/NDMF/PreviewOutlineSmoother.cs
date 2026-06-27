@@ -53,8 +53,8 @@ namespace jp.lilxyzw.outlinesmoother
             {
                 if (!meshIn) return;
                 mesh = Object.Instantiate(meshIn);
-                await OutlineSmootherProcessor.Smooth(mesh, smoother);
-                materials = materialsIn.Select(m => OutlineSmootherProcessor.GetModifiedMaterial(m)).ToArray();
+                materials = materialsIn.Select(m => Object.Instantiate(m)).ToArray();
+                await OutlineSmootherProcessor.Smooth(mesh, smoother, materials);
             }
 
             public void OnFrame(Renderer original, Renderer proxy)

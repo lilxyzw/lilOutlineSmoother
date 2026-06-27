@@ -35,5 +35,6 @@ namespace jp.lilxyzw.outlinesmoother.runtime
         public Texture2D normalMap;
         public Texture2D normalMask;
         public Texture2D widthMask;
+        public Texture2D zoffsetMask;
     }
 }

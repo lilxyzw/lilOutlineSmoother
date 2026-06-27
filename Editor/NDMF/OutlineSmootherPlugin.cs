@@ -29,10 +29,11 @@ namespace jp.lilxyzw.outlinesmoother
                 foreach (var s in smoothers)
                 {
                     var renderer = s.GetComponent<Renderer>();
+                    var materials = renderer.sharedMaterials;
                     if (renderer is SkinnedMeshRenderer skinnedMeshRenderer)
                     {
                         var mesh = Object.Instantiate(skinnedMeshRenderer.sharedMesh);
-                        OutlineSmootherProcessor.Smooth(mesh, s);
+                        OutlineSmootherProcessor.Smooth(mesh, s, materials);
                         skinnedMeshRenderer.sharedMesh = Replace(skinnedMeshRenderer.sharedMesh, mesh, ctx);
                     }
                     else if (renderer is MeshRenderer meshRenderer)
@@ -41,25 +42,30 @@ namespace jp.lilxyzw.outlinesmoother
                         if (meshFilter)
                         {
                             var mesh = Object.Instantiate(meshFilter.sharedMesh);
-                            OutlineSmootherProcessor.Smooth(mesh, s);
+                            OutlineSmootherProcessor.Smooth(mesh, s, materials);
                             meshFilter.sharedMesh = Replace(meshFilter.sharedMesh, mesh, ctx);
                         }
                     }
-                    renderer.sharedMaterials = renderer.sharedMaterials.Select(m => ReplaceToModifiedMaterial(m, modifiedMaterials, ctx)).ToArray();
+                    renderer.sharedMaterials = ReplaceToModifiedMaterials(renderer.sharedMaterials, materials, modifiedMaterials, ctx);
                 }
 
                 foreach (var s in smoothers) Object.DestroyImmediate(s);
             }).PreviewingWith(new PreviewOutlineSmoother());
         }
 
-        private Material ReplaceToModifiedMaterial(Material material, Dictionary<Material, Material> modifiedMaterials, BuildContext ctx)
+        private Material[] ReplaceToModifiedMaterials(Material[] origs, Material[] objs, Dictionary<Material, Material> modifiedMaterials, BuildContext ctx)
         {
-            if (modifiedMaterials.TryGetValue(material, out var value)) return value;
-            return Replace(material, modifiedMaterials[material] = OutlineSmootherProcessor.GetModifiedMaterial(material), ctx);
+            for  (int i = 0; i < origs.Length; i++)
+            {
+                if (modifiedMaterials.TryGetValue(origs[i], out var value)) objs[i] = value;
+                else objs[i] = Replace(origs[i], modifiedMaterials[origs[i]] = objs[i], ctx);
+            }
+            return objs;
         }
 
-        private T Replace<T>(T orig, T obj, BuildContext ctx) where T : Object
+        private static T Replace<T>(T orig, T obj, BuildContext ctx) where T : Object
         {
+            if (orig == obj) return orig;
             ObjectRegistry.RegisterReplacedObject(orig, obj);
             AssetDatabase.AddObjectToAsset(obj, ctx.AssetContainer);
             return obj;

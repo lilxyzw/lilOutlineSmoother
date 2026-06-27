@@ -69,6 +69,7 @@ namespace jp.lilxyzw.outlinesmoother
                 box.Add(new PropertyField { bindingPath = $"settings.Array.data[{i}].normalMap" });
                 box.Add(new PropertyField { bindingPath = $"settings.Array.data[{i}].normalMask" });
                 box.Add(new PropertyField { bindingPath = $"settings.Array.data[{i}].widthMask" });
+                box.Add(new PropertyField { bindingPath = $"settings.Array.data[{i}].zoffsetMask" });
                 box.EnableInClassList("unity-collection-view--with-border", true);
             }
 

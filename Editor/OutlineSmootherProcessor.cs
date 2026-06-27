@@ -2,29 +2,42 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using jp.lilxyzw.outlinesmoother.runtime;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace jp.lilxyzw.outlinesmoother
 {
-    internal static class OutlineSmootherProcessor
+    public static class OutlineSmootherProcessor
     {
-        public static Material GetModifiedMaterial(Material material)
+        public delegate bool OutputVertexColor(Shader shader, float x, float y, float z, float width, float zoffset, ref Color color);
+        public static List<OutputVertexColor> outputCallbacks = new();
+        public delegate bool ModifyMaterial(ref Material material);
+        public static List<ModifyMaterial> materialModifyCallbacks = new();
+
+        [InitializeOnLoadMethod]
+        private static void InitializeInternal()
         {
-            if (!material) return material;
-            material = Object.Instantiate(material);
-            if (material.HasProperty("_OutlineVertexR2Width")) material.SetInt("_OutlineVertexR2Width", 2);
-            return material;
+            materialModifyCallbacks.Add(ModifyOutlineVertexR2Width);
         }
 
-        public static ValueTask Smooth(Mesh mesh, OutlineSmoother smoother)
+        private static bool ModifyOutlineVertexR2Width(ref Material material)
+        {
+            if (!material.HasProperty("_OutlineVertexR2Width")) return false;
+            material.SetInt("_OutlineVertexR2Width", 2);
+            return true;
+        }
+
+        internal static ValueTask Smooth(Mesh mesh, OutlineSmoother smoother, Material[] materials)
         {
             float smoothingDistance = smoother.smoothingDistance;
-            if (smoother.referenceMesh) smoothingDistance = Mathf.Max(smoothingDistance, 0.000000001f);
-            float smoothingDistance2 = smoothingDistance * smoothingDistance;
             float shrinkTipStrength = smoother.shrinkTipStrength;
-            var smoothedMesh = Object.Instantiate(smoother.referenceMesh ? smoother.referenceMesh : mesh);
-            smoothedMesh.RecalculateNormals(MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontResetBoneBounds | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+            var smoothedMesh = mesh;
+            if (smoothingDistance > 0)
+            {
+                smoothedMesh = Object.Instantiate(smoother.referenceMesh ? smoother.referenceMesh : mesh);
+                smoothedMesh.RecalculateNormals(MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontResetBoneBounds | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+            }
             var normalizedNormals = smoothedMesh.normals;
             var normalizedVertices = smoothedMesh.vertices;
             var vertices = mesh.vertices;
@@ -42,13 +55,20 @@ namespace jp.lilxyzw.outlinesmoother
                 var widthMask = GetReadable(settings.widthMask);
                 var normalMask = GetReadable(settings.normalMask);
                 var normalMap = GetReadable(settings.normalMap);
+                var zoffsetMask = GetReadable(settings.zoffsetMask);
+                Shader shader = null;
+                if (materials.Length > submesh && materials[submesh] is Material m)
+                {
+                    shader = m.shader;
+                    if (shader) materials[submesh] = DoModifyMaterial(m);
+                }
 
                 var indices = mesh.GetIndices(submesh).Distinct().ToArray();
 
-                float GetWidth(Vector2 uv)
+                static float GetOrOne(Texture2D tex, Vector2 uv)
                 {
-                    if (!widthMask) return 1f;
-                    return widthMask.Sample(uv).r;
+                    if (!tex) return 1f;
+                    return tex.Sample(uv).r;
                 }
 
                 if (normalMap)
@@ -57,49 +77,54 @@ namespace jp.lilxyzw.outlinesmoother
                     foreach(var i in indices)
                     {
                         var uv = uvs[i];
-                        var width = GetWidth(uv);
+                        var width = GetOrOne(widthMask, uv);
+                        var zoffset = GetOrOne(zoffsetMask, uv);
                         var n = normalMap.Sample(uv);
-                        colors[i] = new(n.r, n.g, n.b, width);
+                        colors[i] = DoOutputVertexColor(shader, n.r, n.g, n.b, width, zoffset);
                     }
                 }
                 else if (smoothingDistance <= 0)
                 {
-                    // 再計算した法線から取得
+                    // 法線から取得
                     foreach(var i in indices)
                     {
                         var uv = uvs[i];
-                        var width = GetWidth(uv);
+                        var width = GetOrOne(widthMask, uv);
+                        var zoffset = GetOrOne(zoffsetMask, uv);
                         var normal = normals[i];
                         var tangent = tangents[i];
                         if (normal.x == tangent.x && normal.y == tangent.y && normal.z == tangent.z)
                         {
-                            colors[i] = new(0.5f, 0.5f, 1.0f, width);
+                            colors[i] = DoOutputVertexColor(shader, 0.5f, 0.5f, 0.5f, width, zoffset);
                             continue;
                         }
                         var outline = normalizedNormals[i];
                         if (normalMask) outline = Vector3.Normalize(Vector3.Lerp(normal, outline, normalMask.Sample(uv).r));
-                        colors[i] = ToVertexColor(outline, normal, tangent, width);
+                        colors[i] = ToVertexColor(shader, outline, normal, tangent, width, zoffset);
                     }
                 }
                 else
                 {
-                    // 再計算した法線の平均値から取得
-                    var dic = Grid(normalizedVertices, smoothingDistance);
+                    var smoothingDistance2 = Mathf.Max(smoothingDistance, 0.000000001f);
+                    var smoothingDistancePow = smoothingDistance2 * smoothingDistance2;
+                    // 法線の平均値から取得
+                    var dic = Grid(normalizedVertices, smoothingDistance2);
                     foreach(var i in indices)
                     {
                         var uv = uvs[i];
-                        var width = GetWidth(uv);
+                        var width = GetOrOne(widthMask, uv);
+                        var zoffset = GetOrOne(zoffsetMask, uv);
                         var normal = normals[i];
                         var tangent = tangents[i];
                         if (normal.x == tangent.x && normal.y == tangent.y && normal.z == tangent.z)
                         {
-                            colors[i] = new(0.5f, 0.5f, 1.0f, width);
+                            colors[i] = DoOutputVertexColor(shader, 0.5f, 0.5f, 0.5f, width, zoffset);
                             continue;
                         }
                         var outline = Vector3.zero;
                         var vertex = vertices[i];
 
-                        var intpos = PosToInt(vertex, smoothingDistance);
+                        var intpos = PosToInt(vertex, smoothingDistance2);
                         var poss = new[] { intpos - Vector3Int.left, intpos, intpos - Vector3Int.right }
                             .SelectMany(p => new[] { p - Vector3Int.down, p, p - Vector3Int.up })
                             .SelectMany(p => new[] { p - Vector3Int.back, p, p - Vector3Int.forward });
@@ -111,7 +136,7 @@ namespace jp.lilxyzw.outlinesmoother
                             foreach (var index in list)
                             {
                                 var nv = normalizedVertices[index];
-                                if (RawDistance(vertex, nv) > smoothingDistance2) continue;
+                                if (RawDistance(vertex, nv) > smoothingDistancePow) continue;
                                 var n = normalizedNormals[index];
                                 ns.Add(n);
                                 outline += n;
@@ -121,13 +146,32 @@ namespace jp.lilxyzw.outlinesmoother
 
                         if (shrinkTipStrength > 0) width *= Mathf.Pow(Mathf.Clamp01(ns.Average(n => Vector3.Dot(n, outline))), 1f/(1.00001f-shrinkTipStrength));
                         if (normalMask) outline = Vector3.Normalize(Vector3.Lerp(normal, outline, normalMask.Sample(uv).r));
-                        colors[i] = ToVertexColor(outline, normal, tangent, width);
+                        colors[i] = ToVertexColor(shader, outline, normal, tangent, width, zoffset);
                     }
                 }
             }
 
             mesh.SetColors(colors);
             return default;
+        }
+
+        private static Color DoOutputVertexColor(Shader shader, float x, float y, float z, float width, float zoffset)
+        {
+            var color = new Color();
+            foreach (var func in outputCallbacks)
+                if (func.Invoke(shader, x, y, z, width, zoffset, ref color))
+                    return color;
+            return new(x, y, z, width);
+        }
+
+        private static Material DoModifyMaterial(Material material)
+        {
+            if (!material) return material;
+            var clone = Object.Instantiate(material);
+            foreach (var func in materialModifyCallbacks)
+                if (func.Invoke(ref clone))
+                    return clone;
+            return material;
         }
 
         private static Color Sample(this Texture2D tex, Vector2 uv) => tex.GetPixelBilinear(uv.x, uv.y);
@@ -147,15 +191,15 @@ namespace jp.lilxyzw.outlinesmoother
             return tex;
         }
 
-        private static Color ToVertexColor(Vector3 normalAverage, Vector3 normal, Vector4 tangent, float width)
+        private static Color ToVertexColor(Shader shader, Vector3 normalAverage, Vector3 normal, Vector4 tangent, float width, float zoffset)
         {
             var binormal = Vector3.Cross(normal, tangent) * tangent.w;
-            return new Color(
+            return DoOutputVertexColor(shader,
                 Vector3.Dot(normalAverage, tangent) * 0.5f + 0.5f,
                 Vector3.Dot(normalAverage, binormal) * 0.5f + 0.5f,
                 Vector3.Dot(normalAverage, normal) * 0.5f + 0.5f,
-                width
-            );
+                width,
+                zoffset);
         }
 
         private static float RawDistance(Vector3 a, Vector3 b)
