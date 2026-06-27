@@ -63,14 +63,14 @@ namespace jp.lilxyzw.outlinesmoother
                 switch (proxy)
                 {
                     case SkinnedMeshRenderer smr:
-                        if (smr.sharedMesh) smr.sharedMesh = mesh;
+                        if (smr.sharedMesh) smr.sharedMesh = OutlineSmootherPlugin.Replace(smr.sharedMesh, mesh);
                         break;
                     case MeshRenderer mr:
                         var mf = mr.GetComponent<MeshFilter>();
-                        if (mf && mf.sharedMesh) mf.sharedMesh = mesh;
+                        if (mf && mf.sharedMesh) mf.sharedMesh = OutlineSmootherPlugin.Replace(mf.sharedMesh, mesh);
                         break;
                 }
-                proxy.sharedMaterials = materials;
+                proxy.sharedMaterials = OutlineSmootherPlugin.ReplaceToModifiedMaterials(proxy.sharedMaterials, materials, new());
             }
 
             void IDisposable.Dispose()

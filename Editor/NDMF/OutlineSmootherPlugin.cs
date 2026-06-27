@@ -53,7 +53,7 @@ namespace jp.lilxyzw.outlinesmoother
             }).PreviewingWith(new PreviewOutlineSmoother());
         }
 
-        private Material[] ReplaceToModifiedMaterials(Material[] origs, Material[] objs, Dictionary<Material, Material> modifiedMaterials, BuildContext ctx)
+        internal static Material[] ReplaceToModifiedMaterials(Material[] origs, Material[] objs, Dictionary<Material, Material> modifiedMaterials, BuildContext ctx = null)
         {
             for  (int i = 0; i < origs.Length; i++)
             {
@@ -63,11 +63,11 @@ namespace jp.lilxyzw.outlinesmoother
             return objs;
         }
 
-        private static T Replace<T>(T orig, T obj, BuildContext ctx) where T : Object
+        internal static T Replace<T>(T orig, T obj, BuildContext ctx = null) where T : Object
         {
             if (orig == obj) return orig;
             ObjectRegistry.RegisterReplacedObject(orig, obj);
-            AssetDatabase.AddObjectToAsset(obj, ctx.AssetContainer);
+            if (ctx != null) AssetDatabase.AddObjectToAsset(obj, ctx.AssetContainer);
             return obj;
         }
     }
