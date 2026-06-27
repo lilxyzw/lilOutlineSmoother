@@ -11,6 +11,7 @@ using UnityEngine;
 
 namespace jp.lilxyzw.outlinesmoother
 {
+    [RunsOnAllPlatforms]
     internal class OutlineSmootherPlugin : Plugin<OutlineSmootherPlugin>
     {
         public override string QualifiedName => "jp.lilxyzw.outlinesmoother";
